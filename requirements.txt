@@ -1,6 +1,5 @@
-torch==0.4.1
-torchvision==0.2.0
-tensorflow==1.14.0
+torch==2.1.0
+torchvision
 imageio
 scipy
 argparse
@@ -9,3 +8,4 @@ sacred
 easydict
 pymongo
 pyyaml
+opencv-python

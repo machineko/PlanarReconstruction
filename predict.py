@@ -7,7 +7,7 @@ from distutils.version import LooseVersion
 
 from sacred import Experiment
 from easydict import EasyDict as edict
-
+from pathlib import Path
 import torch
 import torch.nn.functional as F
 import torchvision.transforms as tf
@@ -31,7 +31,7 @@ def predict(_run, _log):
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("mps")
 
     # build network
     network = UNet(cfg.model)
@@ -59,6 +59,8 @@ def predict(_run, _log):
 
     with torch.no_grad():
         image = cv2.imread(cfg.image_path)
+        origin_shape = [image.shape[1],  image.shape[0]]
+
         # the network is trained with 192*256 and the intrinsic parameter is set as ScanNet
         image = cv2.resize(image, (w, h))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -117,20 +119,27 @@ def predict(_run, _log):
 
         mask = cv2.resize((mask * 255).astype(np.uint8), (w, h))
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-
+        Path("results").mkdir(exist_ok=True, parents=True)
         # visualize depth map as PlaneNet
         depth = 255 - np.clip(depth / 5 * 255, 0, 255).astype(np.uint8)
         depth = cv2.cvtColor(cv2.resize(depth, (w, h)), cv2.COLOR_GRAY2BGR)
+        img = Image.fromarray(image).resize(origin_shape)
+        seg = Image.fromarray(pred_seg).resize(origin_shape)
+        blend_img = Image.fromarray(blend_pred).resize(origin_shape)
+        mask_img = Image.fromarray(mask).resize(origin_shape)
+        depth_img = Image.fromarray(depth).resize(origin_shape)
+        img.save("results/img.png")
+        seg.save("results/segmentation.png")
+        blend_img.save("results/blend_img.png")
+        mask_img.save("results/mask_img.png")
+        depth_img.save("results/depth_img.png")
 
         image = np.concatenate((image, pred_seg, blend_pred, mask, depth), axis=1)
-
         cv2.imshow('image', image)
         cv2.waitKey(0)
 
 
 if __name__ == '__main__':
-    assert LooseVersion(torch.__version__) >= LooseVersion('0.4.0'), \
-        'PyTorch>=0.4.0 is required'
 
     ex.add_config('./configs/predict.yaml')
     ex.run_commandline()
