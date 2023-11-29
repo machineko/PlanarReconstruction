@@ -31,7 +31,7 @@ def predict(_run, _log):
     np.random.seed(cfg.seed)
     random.seed(cfg.seed)
 
-    device = torch.device("mps")
+    device = torch.device(cfg.device)
 
     # build network
     network = UNet(cfg.model)
